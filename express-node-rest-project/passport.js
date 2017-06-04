@@ -3,13 +3,13 @@ var LocalStrategy   = require('passport-local').Strategy;
 var mysql = require('mysql');
 
 var connection = mysql.createConnection({
-                  host     : 'localhost',
-                  user     : 'root',
-                  password : 'admin',
+                  host     : 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+                  user     : 'sjaikris',
+                  password : 'Madhumitha&7',
                   
                 });
 
-connection.query('USE test');
+connection.query('USE edissdevdb');
 
 // expose this function to our app using module.exports
 module.exports = function(passport) {
