@@ -22,7 +22,7 @@ app.use(bodyParser.urlencoded({
 app.use(session({
 	secret: 'testpassport',
 	resave: true,
-	cookie: { maxAge: 60000 },
+	cookie: { maxAge: 900000 },
 	rolling: true,
 	saveUninitialized: true
  } )); // session secret
