@@ -88,7 +88,7 @@ app.post('/registerUser', function (req, res, callback) {
 				
 			console.log("Duplicate entry detected");
 			
-			return res.send({ error:true, "message": "The input you provided is not valid" }); 
+			return res.send({"message": "The input you provided is not valid" }); 
 					 
 			}
 				throw error;
@@ -150,7 +150,7 @@ app.post('/updateInfo', ensureAuthenticated, function (req, res,callback) {
 		connection.query(queryString, function (error, results, fields) {
 			if (error){
 							
-			return res.send({ error:true, "message": "The input you provided is not valid" }); 
+			return res.send({"message": "The input you provided is not valid" }); 
 			throw error;
 			}
 				if(req.body.username){
@@ -259,7 +259,7 @@ app.post('/addProducts', ensureAuthenticated, function (req, res) {
 				
 			console.log("Duplicate entry detected");
 			
-			return res.send({ error:true, "message": "The input you provided is not valid" }); 
+			return res.send({"message": "The input you provided is not valid" }); 
 					 
 			}
 				throw error;
@@ -294,11 +294,11 @@ app.post('/modifyProduct', ensureAuthenticated, function (req, res) {
 		connection.query(queryString, function (error, results, fields) {
 			if (error){
 							
-				return res.send({ error:true, "message": "The input you provided is not valid" }); 
+				return res.send({"message": "The input you provided is not valid" }); 
 				throw error;
 			}
 			if(results.affectedRows == 0){
-				return res.send({ error:true, "message": "The input you provided is not valid" });
+				return res.send({"message": "The input you provided is not valid" });
 			}	
 			else{
 				obj= '{"message":"'+req.body.productName+ ' was successfully updated"}';
@@ -332,7 +332,7 @@ else
 {
     if(asin && !group)
     queryString="SELECT * from test.productdata where asin='"+asin+"'";
-    else if(grp && !pin)
+    else if(group && !asin)
     queryString="SELECT * from test.productdata where `group` like '%"+group+"%'";
     else if(asin && group)
     queryString="SELECT * from test.productdata where asin='"+asin+"' and `group` like '%"+group+"%'";
