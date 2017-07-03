@@ -21,7 +21,8 @@ app.use(bodyParser.urlencoded({
  
 // Session
 app.use(session({
-	key: 'myedisskey'
+	name:'myedisscookie',
+	key: 'myedisskey',
 	secret: 'testpassport',
 	resave: true,
 	cookie: { maxAge: 900000 },
@@ -372,11 +373,14 @@ else
 app.post('/logout', function (req, res){
 	console.log(req.user);
 	if(req.user){
-	req.session.destroy(function (err) {
-	  console.log(req.user);
+	//req.session.destroy(function (err) {
+	 // console.log(req.user);
+	//res.setHeader('Content-Type', 'application/json');
+    //res.send({"message":"You have been successfully logged out"}); 
+  //});
+	req.session=null;
 	res.setHeader('Content-Type', 'application/json');
-    res.send({"message":"You have been successfully logged out"}); 
-  });	
+    res.send({"message":"You have been successfully logged out"});
 	}
 	else{
 		res.setHeader('Content-Type', 'application/json');
