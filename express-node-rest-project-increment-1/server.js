@@ -3,7 +3,8 @@ const app = express();
 const bodyParser = require('body-parser');
 const mysql = require('mysql');
 const passport = require('passport');
-var session  = require('express-session');
+//var session  = require('express-session');
+var session  = require('cookie-session');
 var flash    = require('connect-flash');
 var cookieParser = require('cookie-parser');
 var morgan = require('morgan');
@@ -20,6 +21,7 @@ app.use(bodyParser.urlencoded({
  
 // Session
 app.use(session({
+	key: 'myedisskey'
 	secret: 'testpassport',
 	resave: true,
 	cookie: { maxAge: 900000 },
