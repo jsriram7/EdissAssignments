@@ -2,21 +2,15 @@ var LocalStrategy   = require('passport-local').Strategy;
 
 var mysql = require('mysql');
 
-//var connection = mysql.createConnection({
-  //                host     : 'localhost',
-    //              user     : 'root',
-      //            password : 'admin',
-                  
-        //        });
-
-		//Connect to the mysql instance
-var connection = mysql.createConnection({
-                  host     : 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+var readconnection = mysql.createConnection({
+                  host     : 'mysql-useast1-instance-read-replica.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
                   user     : 'sjaikris',
-                  password : 'Madhumitha&7',
+                  password : 'rootadmin',
                   
-                });
-connection.query('USE test');
+               });
+
+	
+readconnection.query('USE test');
 
 
 module.exports = function(passport) {
@@ -40,7 +34,7 @@ passport.deserializeUser(function(user, done) {
     },
     function(req, username, password, done) { 
 
-         connection.query("SELECT * FROM `test`.userdata WHERE `username` = '" + username + "'",function(err,rows){
+         readconnection.query("SELECT * FROM `test`.userdata WHERE `username` = '" + username + "'",function(err,rows){
 			 console.log("USERNAME  "+ username);
 			 console.log("PASSWORD  "+ password);
 			if (err)

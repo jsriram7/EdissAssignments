@@ -33,21 +33,32 @@ app.use(passport.initialize());
 app.use(passport.session()); 
 app.use(flash()); 
 
-//var connection = mysql.createConnection({
-  //  host: 'localhost',
-    //user: 'root',
-    //password: 'admin',
-    //database: 'test'
-//});
-var connection = mysql.createConnection({
+/*var connection = mysql.createConnection({
+    host: 'localhost',
+    user: 'root',
+    password: 'admin',
+    database: 'test'
+});*/
+var writeconnection = mysql.createConnection({
                   host     : 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
                   user     : 'sjaikris',
-                  password : 'Madhumitha&7',
+                  password : 'rootadmin',
 				  database : 'test'
                 });
 
+var readconnection = mysql.createConnection({
+                  host     : 'mysql-useast1-instance-read-replica.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+                  user     : 'sjaikris',
+                  password : 'rootadmin',
+				  database : 'test'
+                });
 
-connection.connect()
+writeconnection.connect()
+readconnection.connect()
+
+
+
+
 //Login
 app.post('/login', function(req, res, next) {
   passport.authenticate('local-login', function(err, user, info) {
@@ -84,7 +95,7 @@ app.post('/registerUser', function (req, res, callback) {
         return res.send({"message": "The input you provided is not valid" });
     }
 	else{
-	connection.query("INSERT INTO test.userdata set fname=? , lname=? , address=? ,  city =?, state=? , zip= ?, email=? , username= ?, password= ? ", params, function (error, results, fields) {
+	writeconnection.query("INSERT INTO test.userdata set fname=? , lname=? , address=? ,  city =?, state=? , zip= ?, email=? , username= ?, password= ? ", params, function (error, results, fields) {
 			var obj= '{"message":"'+req.body.fname+ ' was registered successfully"}';
 			if (error){
 				if (error.code === "ER_DUP_ENTRY") {
@@ -150,7 +161,7 @@ app.post('/updateInfo', ensureAuthenticated, function (req, res,callback) {
 		queryString = queryString.substring(0, queryString.length - 1);
 		queryString = queryString + ' ' + 'WHERE username = ' + '"'+ req.user.username + '"';
 		console.log(queryString);
-		connection.query(queryString, function (error, results, fields) {
+		writeconnection.query(queryString, function (error, results, fields) {
 			if (error){
 							
 			return res.send({"message": "The input you provided is not valid" }); 
@@ -159,7 +170,7 @@ app.post('/updateInfo', ensureAuthenticated, function (req, res,callback) {
 				if(req.body.username){
 					req.user.username=req.body.username;
 				}
-				connection.query('SELECT * FROM test.userdata WHERE username=' + '"' + req.user.username + '"' , function (error,rows) {
+				readconnection.query('SELECT * FROM test.userdata WHERE username=' + '"' + req.user.username + '"' , function (error,rows) {
 					if (error){
 						throw error;
 					}
@@ -207,7 +218,7 @@ app.post( '/viewUsers', ensureAuthenticated,  function(req, res) {
 	 }
 	 console.log("The final query is" + finalQuery);
 	 
-	var queries = connection.query(finalQuery,  function(error, rows, fields) {
+	var queries = readconnection.query(finalQuery,  function(error, rows, fields) {
    if (!error && rows.length > 0 )
     {    
           var obj= '{"message":"The action was successful","user":[';    
@@ -255,7 +266,7 @@ app.post('/addProducts', ensureAuthenticated, function (req, res) {
         return res.send({"message": "The input you provided is not valid" });
     }
 	else{
-	connection.query("INSERT INTO test.productdata set asin=? , productName=? , productDescription=? , `group` =? ", params, function (error, results, fields) {
+	writeconnection.query("INSERT INTO test.productdata set asin=? , productName=? , productDescription=? , `group` =? ", params, function (error, results, fields) {
 			var obj= '{"message":"'+req.body.productName+ ' was successfully added to the system"}';
 			if (error){
 				if (error.code === "ER_DUP_ENTRY") {
@@ -294,7 +305,7 @@ app.post('/modifyProduct', ensureAuthenticated, function (req, res) {
 		var obj;
         console.log(queryString);
 		
-		connection.query(queryString, function (error, results, fields) {
+		writeconnection.query(queryString, function (error, results, fields) {
 			if (error){
 							
 				return res.send({"message": "The input you provided is not valid" }); 
@@ -345,7 +356,7 @@ else
 
 }
 	console.log(queryString);
-	connection.query(queryString, function(err, rows, fields) {
+	readconnection.query(queryString, function(err, rows, fields) {
    if (!err && rows.length > 0 )
     {    
           var obj= '{"message":"The action was successful","product":[';    
@@ -368,6 +379,134 @@ else
  });
  
 });
+
+//buyProducts
+app.post( '/buyProducts',ensureAuthenticated,  function(req, res) { 
+	var params =req.body.products;
+	var values = "";
+	var isNotInitialValue = 0;
+	var totalasins=0;
+	for(i=0;i<params.length;i++){
+	console.log(JSON.stringify(params[i]));	
+	console.log(params[i].asin);
+	if(isNotInitialValue){
+		values+=',';
+	}
+	values+=(params[i].asin);
+	console.log("Values are ..."+ values);
+	isNotInitialValue++;
+	totalasins++;
+	}
+	var paramset = [values,totalasins];
+	//console.log(paramset);
+	//pass values to mysql function
+	readconnection.query("SELECT verifyProducts(?,?) as isValid" ,paramset, function (error, results, fields) {
+		var obj;
+		
+		if (error)
+			{
+			
+			throw error;
+			}
+			else
+			{
+				console.log(results[0].isValid);
+				if(results[0].isValid==0){
+					console.log("The result from db is "+ results[0].isValid + " and it indicates that products dont match the criteria");
+					obj= '{"message":"There are no products that match that criteria"}';
+					return res.send(obj);
+				}
+				else if(results[0].isValid==1){
+					console.log("The result from db is "+ results[0].isValid + " and it indicates that products  match the criteria");
+					var parameters=[req.user.username,values,totalasins];	
+					
+					writeconnection.query("INSERT INTO test.orders set username=? , listofasins=? , totalintheorder=? ", parameters, function (error, results, fields) {
+						obj= '{"message":"The action was successful"}';
+						if (error){
+							
+							throw error;
+						}
+						return res.send(obj);
+					});
+				}
+								
+			}
+			
+	});
+});
+
+//productsPurchased
+app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) { 
+	var username =req.body.username;
+	var currentlyLoggedInUser = req.user.username;
+	if( currentlyLoggedInUser != "jadmin") 
+	{
+    var obj= '{"message":"You must be an admin to perform this action"}';
+    return res.send(obj);            
+	}
+	else
+	{
+	readconnection.query("SELECT verifyUsername(?) as isValid" ,[username], function (error, results, fields) {
+		var obj;
+		
+		if (error)
+			{			
+			throw error;
+			}
+			else
+			{
+				console.log(results[0].isValid);
+				if(results[0].isValid==0){
+					console.log("The result from db is "+ results[0].isValid + " and it indicates that users dont match the criteria");
+					obj= '{"message":"There are no users that match that criteria"}';
+					return res.send(obj);
+				}
+				else if(results[0].isValid==1){
+					console.log("The result from db is "+ results[0].isValid + " and it indicates that users  match the criteria");
+					var queryString = "SELECT b.productName as productName, a.product, count(a.product) as quantity from test.purchasehistory a, test.productdata b where a.username ='" + username + "' and a.product=b.asin group by a.product";	
+					console.log(queryString);
+					readconnection.query(queryString, function (error, results, fields) {
+						  if(error)
+						  {
+							  throw error;
+						  }
+						  if (!error && results.length > 0 )
+							 { 
+								console.log("history..");
+							 res.json({"message":"The action was successful","products":results});
+							 }
+						});
+				}
+								
+			}
+			
+	});
+	}
+});
+
+//getRecommendations
+app.post( '/getRecommendations',ensureAuthenticated,  function(req, res) { 
+	var asin =req.body.asin;
+	var queryString = "select product2 as asin from (select product2, count(product2) as recocount from test.orderrelation where product1 = '" + asin + "' group by product2 order by recocount desc limit 5) as tb1";
+
+	readconnection.query(queryString, function (error, results, fields) {
+		
+		  if(error)
+						  {
+							  throw error;
+						  }
+						  if (!error && results.length > 0 )
+							 { 
+								console.log("history..");
+							 res.json({"message":"The action was successful","products":results});
+							 }
+						 else if (results.length<=0){
+							 res.json({"message":"There are no recommendations for that product"});
+						 }
+			
+	});
+});
+
 
 //Logout
 app.post('/logout', function (req, res){
