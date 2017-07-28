@@ -44,7 +44,7 @@ passport.deserializeUser(function(user, done) {
 		connection.query("SELECT * FROM `test`.userdata WHERE `username` = '" + username + "'",function(err,rows){
 			 console.log("USERNAME  "+ username);
 			 console.log("PASSWORD  "+ password);
-			connection.release();
+			
 			if (err)
                 return done(err);
 			 if (!rows.length) {
@@ -60,10 +60,10 @@ passport.deserializeUser(function(user, done) {
 			}
             
             return done(null, rows[0]);			
-		
+			
 		});
 		
-	
+	connection.release();
 			
 		});
          
