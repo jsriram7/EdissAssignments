@@ -39,22 +39,41 @@ app.use(flash());
     password: 'admin',
     database: 'test'
 });*/
-var writeconnection = mysql.createConnection({
+
+var connectionPool_1 = mysql.createPool({
+    connectionLimit: 500, //important
+    host: 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+    user: 'sjaikris',
+    password: 'rootadmin',
+    database: 'test',
+    debug: false
+});
+
+var connectionPool_2 = mysql.createPool({
+    connectionLimit: 500, //important
+    //host: 'mysql-useast1-instance-read-replica.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+    host: 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+	user: 'sjaikris',
+    password: 'rootadmin',
+    database: 'test',
+    debug: false
+});
+/*var writeconnection = mysql.createConnection({
                   host     : 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
                   user     : 'sjaikris',
                   password : 'rootadmin',
 				  database : 'test'
-                });
+                });*/
 
-var readconnection = mysql.createConnection({
+/*var readconnection = mysql.createConnection({
                   host     : 'mysql-useast1-instance-read-replica.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
                   user     : 'sjaikris',
                   password : 'rootadmin',
 				  database : 'test'
-                });
+                });*/
 
-writeconnection.connect()
-readconnection.connect()
+//writeconnection.connect()
+//readconnection.connect()
 
 
 
@@ -95,8 +114,10 @@ app.post('/registerUser', function (req, res, callback) {
         return res.send({"message": "The input you provided is not valid" });
     }
 	else{
-	writeconnection.query("INSERT INTO test.userdata set fname=? , lname=? , address=? ,  city =?, state=? , zip= ?, email=? , username= ?, password= ? ", params, function (error, results, fields) {
+		connectionPool_1.getConnection(function(err, connection) {
+			connection.query("INSERT INTO test.userdata set fname=? , lname=? , address=? ,  city =?, state=? , zip= ?, email=? , username= ?, password= ? ", params, function (error, results, fields) {
 			var obj= '{"message":"'+req.body.fname+ ' was registered successfully"}';
+			connection.release();
 			if (error){
 				if (error.code === "ER_DUP_ENTRY") {
 				
@@ -108,7 +129,10 @@ app.post('/registerUser', function (req, res, callback) {
 				throw error;
 			}
 			return res.send(obj);
-	 });
+			});
+			
+		});
+	
 	
 	}
 	
@@ -159,9 +183,11 @@ app.post('/updateInfo', ensureAuthenticated, function (req, res,callback) {
         }
 		
 		queryString = queryString.substring(0, queryString.length - 1);
-		queryString = queryString + ' ' + 'WHERE username = ' + '"'+ req.user.username + '"';
+		queryString = queryString + " WHERE username = '" +  req.user.username + "'";
 		console.log(queryString);
-		writeconnection.query(queryString, function (error, results, fields) {
+		connectionPool_1.getConnection(function(err, connection) {
+		connection.query(queryString, function (error, results, fields) {
+			
 			if (error){
 							
 			return res.send({"message": "The input you provided is not valid" }); 
@@ -169,8 +195,11 @@ app.post('/updateInfo', ensureAuthenticated, function (req, res,callback) {
 			}
 				if(req.body.username){
 					req.user.username=req.body.username;
+					
 				}
-				readconnection.query('SELECT * FROM test.userdata WHERE username=' + '"' + req.user.username + '"' , function (error,rows) {
+				
+				connection.query('SELECT * FROM test.userdata WHERE username=' + '"' + req.user.username + '"' , function (error,rows) {
+					connection.release();
 					if (error){
 						throw error;
 					}
@@ -179,7 +208,13 @@ app.post('/updateInfo', ensureAuthenticated, function (req, res,callback) {
 				console.log("Replaced the session fname" + ' '+ req.user.fname);
 				obj= '{"message":"'+req.user.fname+ ' your information was successfully updated"}';
 				return res.send(obj);
-			});
+				
+					
+				});
+							
+			
+		});
+	
 			
 	 });
 	(req, res, callback);
@@ -218,7 +253,9 @@ app.post( '/viewUsers', ensureAuthenticated,  function(req, res) {
 	 }
 	 console.log("The final query is" + finalQuery);
 	 
-	var queries = readconnection.query(finalQuery,  function(error, rows, fields) {
+	 connectionPool_1.getConnection(function(err, connection) {
+		var queries = connection.query(finalQuery,  function(error, rows, fields) {
+			connection.release();
    if (!error && rows.length > 0 )
     {    
           var obj= '{"message":"The action was successful","user":[';    
@@ -241,7 +278,10 @@ app.post( '/viewUsers', ensureAuthenticated,  function(req, res) {
       var obj= '{"message":"There are no users that match that criteria"}';
       return res.send(obj);  
     } 
- });
+ }); 
+		 
+	 });
+	
 }
  //(req,res,next);
 });
@@ -266,8 +306,10 @@ app.post('/addProducts', ensureAuthenticated, function (req, res) {
         return res.send({"message": "The input you provided is not valid" });
     }
 	else{
-	writeconnection.query("INSERT INTO test.productdata set asin=? , productName=? , productDescription=? , `group` =? ", params, function (error, results, fields) {
+	connectionPool_1.getConnection(function(err, connection) {
+	connection.query("INSERT INTO test.productdata set asin=? , productName=? , productDescription=? , `group` =? ", params, function (error, results, fields) {
 			var obj= '{"message":"'+req.body.productName+ ' was successfully added to the system"}';
+			connection.release();
 			if (error){
 				if (error.code === "ER_DUP_ENTRY") {
 				
@@ -280,6 +322,9 @@ app.post('/addProducts', ensureAuthenticated, function (req, res) {
 			}
 			return res.send(obj);
 	 });
+		
+		
+	});	
 	
 	 }	
 	}
@@ -304,8 +349,9 @@ app.post('/modifyProduct', ensureAuthenticated, function (req, res) {
 		}
 		var obj;
         console.log(queryString);
-		
-		writeconnection.query(queryString, function (error, results, fields) {
+		connectionPool_1.getConnection(function(err, connection) {
+		connection.query(queryString, function (error, results, fields) {
+			connection.release();
 			if (error){
 							
 				return res.send({"message": "The input you provided is not valid" }); 
@@ -319,12 +365,15 @@ app.post('/modifyProduct', ensureAuthenticated, function (req, res) {
 				return res.send(obj);
 			}
 				
-			});
+			});	
+			
+		});
+		
 	}
 	});
 	
 //viewProducts
-app.post( '/viewProducts',  function(req, res) { 
+/*app.post( '/viewProducts',  function(req, res) { 
 	var params =[req.body.asin,req.body.keyword,req.body.group];
 	var asin= req.body.asin;
 	var keyword= req.body.keyword;
@@ -356,7 +405,10 @@ else
 
 }
 	console.log(queryString);
-	readconnection.query(queryString, function(err, rows, fields) {
+	connectionPool_2.getConnection(function(err, connection) {
+		
+	connection.query(queryString, function(err, rows, fields) {
+		
    if (!err && rows.length > 0 )
     {    
           var obj= '{"message":"The action was successful","product":[';    
@@ -376,7 +428,72 @@ else
       var obj= '{"message":"There are no products that match that criteria"}';
       return res.send(obj);  
 	} 
+ });	
+		
+	});
+	
+ 
+});*/
+
+//viewProducts
+app.post( '/viewProducts',  function(req, res, next) { 
+console.log('entered');
+console.log(req.body.asin+ " " + req.body.keyword+ " "+ req.body.group);
+var params =[req.body.asin,req.body.keyword,req.body.group];
+var pin= req.body.asin;
+var key= req.body.keyword;
+var grp = req.body.group;
+var querystring;
+
+
+connectionPool_2.getConnection(function(err,connection){
+if(typeof req.body.asin === 'undefined' && typeof req.body.group ==='undefined' && typeof req.body.keyword === 'undefined'){
+    querystring = "SELECT asin, productName from test.productdata limit 1000;";
+}
+else{
+querystring = "SELECT asin, productName from test.productdata where";
+if(req.body.asin) 
+	{ 
+	querystring+=" asin = "+ connection.escape(req.body.asin)+" or"; 
+	}  
+if(req.body.group) 
+	{
+	querystring += ' match(`group`) against ('+ connection.escape(req.body.group) +' IN NATURAL LANGUAGE MODE) or'; 
+	}
+
+if(req.body.keyword)
+	{ 
+	var word = req.body.keyword;
+    var numberOfWords = req.body.keyword.split(" ");
+    if(numberOfWords.length > 1){
+      //console.log(word);
+        if(word.charAt(0) !== '\"'){
+        req.body.keyword = "\"" + req.body.keyword + "\"";
+        }
+		querystring+=  ' match(productName,productDescription) against ('+ connection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) or'; }
+		querystring = querystring.slice(0,-2);
+		querystring += 'limit 1000;';
+	}
+console.log("querystring"+querystring);
+
+var queries = connection.query(querystring, function(err, results, fields) {
+   connection.release();
+   console.log("length..."+results.length);
+   if (!err && results.length > 0 )
+    {    
+           res.json({"message":"The action was successful","product":results});
+    }            
+
+   else          
+    {           
+      var obj= '{"message":"There are no products that match that criteria"}';
+      res.setHeader('Content-Type', 'application/json');
+      return res.send(obj);     
+          
+    } 
  });
+}
+}); 
  
 });
 
@@ -400,7 +517,8 @@ app.post( '/buyProducts',ensureAuthenticated,  function(req, res) {
 	var paramset = [values,totalasins];
 	//console.log(paramset);
 	//pass values to mysql function
-	readconnection.query("SELECT verifyProducts(?,?) as isValid" ,paramset, function (error, results, fields) {
+	connectionPool_1.getConnection(function(err, connection) {
+	connection.query("SELECT verifyProducts(?,?) as isValid" ,paramset, function (error, results, fields) {
 		var obj;
 		
 		if (error)
@@ -419,20 +537,28 @@ app.post( '/buyProducts',ensureAuthenticated,  function(req, res) {
 				else if(results[0].isValid==1){
 					console.log("The result from db is "+ results[0].isValid + " and it indicates that products  match the criteria");
 					var parameters=[req.user.username,values,totalasins];	
-					
-					writeconnection.query("INSERT INTO test.orders set username=? , listofasins=? , totalintheorder=? ", parameters, function (error, results, fields) {
+					//connectionPool_1.getConnection(function(err, wconnection) {
+					connection.query("INSERT INTO test.orders set username=? , listofasins=? , totalintheorder=? ", parameters, function (error, results, fields) {
 						obj= '{"message":"The action was successful"}';
+						//wconnection.release();
+						
 						if (error){
 							
 							throw error;
 						}
 						return res.send(obj);
-					});
+					});	
+						
+					//});
+					
 				}
 								
 			}
-			
+		connection.release();	
+	});	
+		
 	});
+	
 });
 
 //productsPurchased
@@ -446,7 +572,8 @@ app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) {
 	}
 	else
 	{
-	readconnection.query("SELECT verifyUsername(?) as isValid" ,[username], function (error, results, fields) {
+		connectionPool_1.getConnection(function(err, connection) {
+			connection.query("SELECT verifyUsername(?) as isValid" ,[username], function (error, results, fields) {
 		var obj;
 		
 		if (error)
@@ -465,7 +592,7 @@ app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) {
 					console.log("The result from db is "+ results[0].isValid + " and it indicates that users  match the criteria");
 					var queryString = "SELECT b.productName as productName, a.product, count(a.product) as quantity from test.purchasehistory a, test.productdata b where a.username ='" + username + "' and a.product=b.asin group by a.product";	
 					console.log(queryString);
-					readconnection.query(queryString, function (error, results, fields) {
+					connection.query(queryString, function (error, results, fields) {
 						  if(error)
 						  {
 							  throw error;
@@ -479,8 +606,10 @@ app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) {
 				}
 								
 			}
-			
+		connection.release();	
 	});
+		});
+	
 	}
 });
 
@@ -488,9 +617,9 @@ app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) {
 app.post( '/getRecommendations',ensureAuthenticated,  function(req, res) { 
 	var asin =req.body.asin;
 	var queryString = "select product2 as asin from (select product2, count(product2) as recocount from test.orderrelation where product1 = '" + asin + "' group by product2 order by recocount desc limit 5) as tb1";
-
-	readconnection.query(queryString, function (error, results, fields) {
-		
+	connectionPool_1.getConnection(function(err, connection) {
+	connection.query(queryString, function (error, results, fields) {
+		connection.release();
 		  if(error)
 						  {
 							  throw error;
@@ -505,6 +634,10 @@ app.post( '/getRecommendations',ensureAuthenticated,  function(req, res) {
 						 }
 			
 	});
+	
+	
+});
+	
 });
 
 
