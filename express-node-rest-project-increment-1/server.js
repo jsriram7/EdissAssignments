@@ -42,7 +42,7 @@ app.use(flash());
 
 var connectionPool_1 = mysql.createPool({
     connectionLimit: 500, //important
-    host: 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+    host: 'myediss-rds-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
     user: 'sjaikris',
     password: 'rootadmin',
     database: 'test',
@@ -52,7 +52,7 @@ var connectionPool_1 = mysql.createPool({
 var connectionPool_2 = mysql.createPool({
     connectionLimit: 500, //important
     //host: 'mysql-useast1-instance-read-replica.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
-    host: 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+    host: 'myediss-rds-read-replica.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
 	user: 'sjaikris',
     password: 'rootadmin',
     database: 'test',
@@ -253,7 +253,7 @@ app.post( '/viewUsers', ensureAuthenticated,  function(req, res) {
 	 }
 	 console.log("The final query is" + finalQuery);
 	 
-	 connectionPool_1.getConnection(function(err, connection) {
+	 connectionPool_2.getConnection(function(err, connection) {
 		var queries = connection.query(finalQuery,  function(error, rows, fields) {
 			connection.release();
    if (!error && rows.length > 0 )
@@ -435,7 +435,6 @@ else
  
 });*/
 
-//viewProducts
 app.post( '/viewProducts',  function(req, res, next) { 
 console.log('entered');
 console.log(req.body.asin+ " " + req.body.keyword+ " "+ req.body.group);
@@ -446,42 +445,46 @@ var grp = req.body.group;
 var querystring;
 
 
-connectionPool_2.getConnection(function(err,connection){
+connectionPool_2.getConnection(function(err,readconnection){
 if(typeof req.body.asin === 'undefined' && typeof req.body.group ==='undefined' && typeof req.body.keyword === 'undefined'){
-    querystring = "SELECT asin, productName from test.productdata limit 1000;";
+    querystring = "SELECT asin, productName from productdata limit 1000;";
 }
 else{
-querystring = "SELECT asin, productName from test.productdata where";
-if(req.body.asin) 
-	{ 
-	querystring+=" asin = "+ connection.escape(req.body.asin)+" or"; 
-	}  
-if(req.body.group) 
-	{
-	querystring += ' match(`group`) against ('+ connection.escape(req.body.group) +' IN NATURAL LANGUAGE MODE) or'; 
-	}
-
-if(req.body.keyword)
-	{ 
-	var word = req.body.keyword;
+querystring = "SELECT asin, productName from productdata where";
+if(pin) { querystring+=" asin = "+ readconnection.escape(req.body.asin)+" or"; }  
+if(grp) { querystring += ' match(`group`) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) or'; }
+if(key) { 
+        var word = req.body.keyword;
     var numberOfWords = req.body.keyword.split(" ");
     if(numberOfWords.length > 1){
       //console.log(word);
         if(word.charAt(0) !== '\"'){
         req.body.keyword = "\"" + req.body.keyword + "\"";
-        }
-		querystring+=  ' match(productName,productDescription) against ('+ connection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) or'; }
-		querystring = querystring.slice(0,-2);
-		querystring += 'limit 1000;';
-	}
+      }
+    }
+   
+  querystring+=  ' match(productName,productDescription) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) or'; }
+  
+querystring = querystring.slice(0,-2);
+querystring += 'limit 1000;';
+}
 console.log("querystring"+querystring);
 
-var queries = connection.query(querystring, function(err, results, fields) {
-   connection.release();
-   console.log("length..."+results.length);
-   if (!err && results.length > 0 )
+var queries = readconnection.query(querystring, function(err, rows, fields) {
+   readconnection.release();
+   console.log("length..."+rows.length);
+   if (!err && rows.length > 0 )
     {    
-           res.json({"message":"The action was successful","product":results});
+          var obj= '{"message":"The action was successful","product":[';    
+          var results = [];
+          for(var i =0; i< rows.length; i++)
+          {
+              var temp= '{"asin":"'+rows[i].asin+'","productName":"'+rows[i].productName+'"}';
+              results.push(temp);
+          }
+          obj=obj+results+']}';
+          res.setHeader('Content-Type', 'application/json');
+          return res.send(obj);
     }            
 
    else          
@@ -492,9 +495,8 @@ var queries = connection.query(querystring, function(err, results, fields) {
           
     } 
  });
-}
 }); 
- 
+ (req,res,next);
 });
 
 //buyProducts
@@ -617,7 +619,7 @@ app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) {
 app.post( '/getRecommendations',ensureAuthenticated,  function(req, res) { 
 	var asin =req.body.asin;
 	var queryString = "select product2 as asin from (select product2, count(product2) as recocount from test.orderrelation where product1 = '" + asin + "' group by product2 order by recocount desc limit 5) as tb1";
-	connectionPool_1.getConnection(function(err, connection) {
+	connectionPool_2.getConnection(function(err, connection) {
 	connection.query(queryString, function (error, results, fields) {
 		connection.release();
 		  if(error)

@@ -13,7 +13,7 @@ var mysql = require('mysql');
 //readconnection.query('USE test');
 var connectionPool_2 = mysql.createPool({
     connectionLimit: 500, //important
-    host: 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+    host: 'myediss-rds-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
     user: 'sjaikris',
     password: 'rootadmin',
     database: 'test',
