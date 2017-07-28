@@ -465,10 +465,10 @@ if(key) {
       }
     }*/
    
-  querystring+=  ' match(productName) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) AND productName='+ readconnection.escape(req.body.keyword) +' or'; }
+  querystring+=  ' match(productName) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE)  or'; }
   
 querystring = querystring.slice(0,-2);
-querystring += 'limit 1000;';
+querystring += 'limit 1;';
 }
 console.log("querystring"+querystring);
 
