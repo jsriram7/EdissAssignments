@@ -455,7 +455,7 @@ querystring = "SELECT asin, productName from productdata where";
 if(pin) { querystring+=" asin = "+ readconnection.escape(req.body.asin)+" or"; }  
 if(grp) { querystring += ' match(`group`) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) or'; }
 if(key) { 
-        var word = req.body.keyword;
+   /*     var word = req.body.keyword;
     var numberOfWords = req.body.keyword.split(" ");
     if(numberOfWords.length > 1){
       //console.log(word);
@@ -463,7 +463,7 @@ if(key) {
         req.body.keyword = "\"" + req.body.keyword + "\"";
 		console.log('The keyword is' + req.body.keyword);
       }
-    }
+    }*/
    
   querystring+=  ' match(productName) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) AND productName='+ readconnection.escape(req.body.keyword) +' or'; }
   
