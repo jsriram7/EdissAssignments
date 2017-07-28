@@ -42,8 +42,9 @@ app.use(flash());
 
 var connectionPool_1 = mysql.createPool({
     connectionLimit: 500, //important
-    host: 'myediss-rds-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
-    user: 'sjaikris',
+    //host: 'myediss-rds-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+    host: 'mysql-useast1-instance.ce2fvdeklmyb.us-east-1.rds.amazonaws.com',
+	user: 'sjaikris',
     password: 'rootadmin',
     database: 'test',
     debug: false
@@ -253,7 +254,7 @@ app.post( '/viewUsers', ensureAuthenticated,  function(req, res) {
 	 }
 	 console.log("The final query is" + finalQuery);
 	 
-	 connectionPool_2.getConnection(function(err, connection) {
+	 connectionPool_1.getConnection(function(err, connection) {
 		var queries = connection.query(finalQuery,  function(error, rows, fields) {
 			connection.release();
    if (!error && rows.length > 0 )
@@ -445,7 +446,7 @@ var grp = req.body.group;
 var querystring;
 
 
-connectionPool_2.getConnection(function(err,readconnection){
+connectionPool_1.getConnection(function(err,readconnection){
 if(typeof req.body.asin === 'undefined' && typeof req.body.group ==='undefined' && typeof req.body.keyword === 'undefined'){
     querystring = "SELECT asin, productName from productdata limit 1000;";
 }
@@ -460,10 +461,11 @@ if(key) {
       //console.log(word);
         if(word.charAt(0) !== '\"'){
         req.body.keyword = "\"" + req.body.keyword + "\"";
+		console.log('The keyword is' + req.body.keyword);
       }
     }
    
-  querystring+=  ' match(productName,productDescription) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) or'; }
+  querystring+=  ' match(productName) against ('+ readconnection.escape(req.body.keyword) +' IN NATURAL LANGUAGE MODE) AND productName='+ readconnection.escape(req.body.keyword) +' or'; }
   
 querystring = querystring.slice(0,-2);
 querystring += 'limit 1000;';
@@ -619,7 +621,7 @@ app.post( '/productsPurchased',ensureAuthenticated,  function(req, res) {
 app.post( '/getRecommendations',ensureAuthenticated,  function(req, res) { 
 	var asin =req.body.asin;
 	var queryString = "select product2 as asin from (select product2, count(product2) as recocount from test.orderrelation where product1 = '" + asin + "' group by product2 order by recocount desc limit 5) as tb1";
-	connectionPool_2.getConnection(function(err, connection) {
+	connectionPool_1.getConnection(function(err, connection) {
 	connection.query(queryString, function (error, results, fields) {
 		connection.release();
 		  if(error)
